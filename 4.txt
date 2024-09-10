@@ -1,0 +1,42 @@
+npm i kafka-node
+const kafka = require('kafka-node');
+const Producer = kafka.Producer;
+const client = new kafka.KafkaClient();
+const producer = new Producer(client);
+
+producer.on('ready', function () {
+  console.log('Producer is ready');
+  
+  const message = 'Hello Kafka!';
+  const payload = [
+    { topic: 'my-topic', messages: message }
+  ];
+
+  producer.send(payload, function (err, data) {
+    console.log(data);
+    process.exit();
+  });
+});
+
+producer.on('error', function (err) {
+  console.error('Producer error:', err);
+});
+
+node producer
+const kafka = require('kafka-node');
+const Consumer = kafka.Consumer;
+const client = new kafka.KafkaClient();
+const consumer = new Consumer(
+  client,
+  [{ topic: 'my-topic', partition: 0 }],
+  { autoCommit: false }
+);
+
+consumer.on('message', function (message) {
+  console.log(message);
+});
+
+consumer.on('error', function (err) {
+  console.error('Consumer error:', err);
+});
+node consumer.js

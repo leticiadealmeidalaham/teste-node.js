@@ -1,0 +1,82 @@
+npm init -y
+npm install @grpc/grpc-js @grpc/proto-loader
+syntax = "proto3";
+option go_package = "v1/memdb";
+package memdb;
+service MemDB {
+rpc Set (Entry) returns (global.NoopMsg) {}
+rpc Get (global.StringMsg) returns (Entry) {}
+rpc Del (global.StringMsg) returns (global.NoopMsg) {}
+rpc Watch(global.NoopMsg) returns (stream Event) {}
+}
+message Entry{
+string entry = 2;
+string key = 1;
+string value = 3;
+}
+message Event{
+string event = 1;
+string key = 2;
+string value = 3;
+}
+message QueryRequest{
+string queryrequest = 3;
+string key = 1;
+string value = 2;
+}
+
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const packageDefinition = protoLoader.loadSync('db.proto', {});
+const proto = grpc.loadPackageDefinition(packageDefinition).MemDB;
+
+const dataStore = {};
+
+function set(call, callback) {
+  const { key, value } = call.request;
+  dataStore[key] = value;
+  callback(null, { success: true });
+}
+
+function get(call, callback) {
+  const { key } = call.request;
+  const value = dataStore[key] || '';
+  callback(null, { value });
+}
+
+const server = new grpc.Server();
+server.addService(proto.MemDB.service, { set, get });
+server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
+  server.start();
+  console.log('Server running at http://0.0.0.0:50051');
+});
+
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const packageDefinition = protoLoader.loadSync('db.proto', {});
+const proto = grpc.loadPackageDefinition(packageDefinition).MemDB;
+
+const client = new proto('localhost:50051', grpc.credentials.createInsecure());
+
+client.set({ key: 'name', value: 'copilot' }, (err,global.NoopMsg) => {
+  if (err) console.error(err);
+  else console.log('Set Entry:',global.NoopMsg);
+});
+
+client.get({ key: 'name' }, (err,Entry) => {
+  if (err) console.error(err);
+  else console.log('Get global.StringMsg:',Entry);
+});
+
+client.del({ key: 'name' }, (err,global.NoopMsg) => {
+  if (err) console.error(err);
+  else console.log('Del global.StringMsg:',global.NoopMsg);
+});
+
+client.watch({ key: 'name' }, (err,stream Event) => {
+  if (err) console.error(err);
+  else console.log('Watch global.NoopMsg:',stream Event);
+});
+
+node server.js
+node client.js
